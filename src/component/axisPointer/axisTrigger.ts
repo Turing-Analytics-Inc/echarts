@@ -119,7 +119,6 @@ export default function axisTrigger(
     const dispatchAction = payload.dispatchAction || bind(api.dispatchAction, api);
     const coordSysAxesInfo = (ecModel.getComponent('axisPointer') as AxisPointerModel)
         .coordSysAxesInfo as CollectedCoordInfo;
-
     // Pending
     // See #6121. But we are not able to reproduce it yet.
     if (!coordSysAxesInfo) {
@@ -157,6 +156,12 @@ export default function axisTrigger(
         showPointer: curry(showPointer, showValueMap),
         showTooltip: curry(showTooltip, dataByCoordSys)
     };
+    const xAxisOption:any = ecModel.option.xAxis;
+    let useY:boolean;
+    if (xAxisOption && xAxisOption.length > 0) {
+
+         useY = xAxisOption[0].useY;
+    }
     // Process for triggered axes.
     each(coordSysAxesInfo.coordSysMap, function (coordSys, coordSysKey) {
         // If a point given, it must be contained by the coordinate system.
@@ -172,7 +177,8 @@ export default function axisTrigger(
                     val = axis.pointToData(point);
                 }
                 let yVal;
-                if (axis.dim === 'x') {
+
+                if (axis.dim === 'x' && useY) {
                     const yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey]['yAxis.value||yAxis'];
                     if (yAxis) {
                         yVal = yAxis.axis.pointToData(point);
