@@ -149,69 +149,22 @@ under the License.
                     grid: { left: 70, bottom: 50, top: 50, right: 20 },
                     tooltip: {
                         trigger: "axis",
-                        confine: true,
-                        enterable: true,
+                        confine: false,
+                        enterable: false,
                         className: "chart-tooltip-container",
                         axisPointer: {
                             type: "cross",
                             label: { show: true, precision: "0" },
                         },
                     },
-                    dataZoom: [
-                        { type: "inside", filterMode: "none" },
-                        {
-                            type: "slider",
-                            id: "xAxis-slider",
-                            xAxisIndex: 0,
-                            filterMode: "none",
-                            backgroundColor: "rgba(0,0,0,0)",
-                            fillerColor: "rgba(0,0,0,0)",
-                            handleSize: "16px",
-                            handleIcon: "circle",
-                            handleStyle: { opacity: 0 },
-                            borderColor: "rgba(0,0,0,0)",
-                            showDataShadow: false,
-                            showDetail: false,
-                            moveHandleSize: 0,
-                            moveHandleStyle: { borderWidth: 0, opacity: 0 },
-                            zlevel: -1,
-                            bottom: 28,
-                            brushSelect: false,
-                            height: "21px",
-                            show: true,
-                        },
-                        {
-                            type: "slider",
-                            id: "yAxis-slider",
-                            yAxisIndex: 0,
-                            filterMode: "none",
-                            backgroundColor: "rgba(0,0,0,0)",
-                            fillerColor: "rgba(0,0,0,0)",
-                            handleSize: "16px",
-                            handleIcon: "circle",
-                            handleStyle: { opacity: 0 },
-                            borderColor: "rgba(0,0,0,0)",
-                            showDataShadow: false,
-                            showDetail: false,
-                            moveHandleSize: 0,
-                            moveHandleStyle: { borderWidth: 0, opacity: 0 },
-                            left: 42,
-                            zlevel: -1,
-                            brushSelect: false,
-                        },
-                        {
-                            type: "inside",
-                            orient: "vertical",
-                            filterMode: "none",
-                        },
-                    ],
+
                     series: [
                         {
                             id: "92tbh2znm1",
                             name: "(2377) Cardium",
                             type: "line",
                             itemStyle: { color: "#0B6CA8" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#0B6CA8",
@@ -372,7 +325,7 @@ under the License.
                             name: "(2377) Cardium Forecast",
                             type: "line",
                             itemStyle: { color: "#0B6CA8" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#0B6CA8",
@@ -620,7 +573,7 @@ under the License.
                             name: "(1806) DB Cretaceous - Spirit River",
                             type: "line",
                             itemStyle: { color: "#91B46E" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#91B46E",
@@ -703,7 +656,7 @@ under the License.
                             name: "(1806) DB Cretaceous - Spirit River Forecast",
                             type: "line",
                             itemStyle: { color: "#91B46E" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#91B46E",
@@ -983,7 +936,7 @@ under the License.
                             name: "(756) Duvernay",
                             type: "line",
                             itemStyle: { color: "#F2C638" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#F2C638",
@@ -1043,7 +996,7 @@ under the License.
                             name: "(756) Duvernay Forecast",
                             type: "line",
                             itemStyle: { color: "#F2C638" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#F2C638",
@@ -1418,7 +1371,7 @@ under the License.
                             name: "(12619) Montney",
                             type: "line",
                             itemStyle: { color: "#F28F38" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#F28F38",
@@ -1505,7 +1458,7 @@ under the License.
                             name: "(12619) Montney Forecast",
                             type: "line",
                             itemStyle: { color: "#F28F38" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#F28F38",
@@ -1760,7 +1713,7 @@ under the License.
                             name: "(249) Viking",
                             type: "line",
                             itemStyle: { color: "#DB2720" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#DB2720",
@@ -1962,7 +1915,7 @@ under the License.
                             name: "(249) Viking Forecast",
                             type: "line",
                             itemStyle: { color: "#DB2720" },
-                            emphasis: { focus: "series" },
+
                             line: {
                                 originalWidth: 3,
                                 originalColor: "#DB2720",

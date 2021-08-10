@@ -135,6 +135,7 @@ interface AxisLineOption {
     symbolSize?: number[],
     symbolOffset?: number[],
     lineStyle?: LineStyleOption,
+    customValues?: (number | string | Date)[],
 }
 
 interface AxisTickOption {
@@ -144,6 +145,7 @@ interface AxisTickOption {
     // The length of axisTick.
     length?: number,
     lineStyle?: LineStyleOption
+
 
     // --------------------------------------------
     // [Properties below only for 'category' axis]:
@@ -183,6 +185,7 @@ interface AxisLabelOption extends Omit<TextCommonOption, 'color'> {
     margin?: number,
     // value is supposed to be OptionDataPrimitive but for time axis, it is time stamp.
     formatter?: AxisLabelFormatterOption | TimeAxisLabelFormatterOption,
+    customValues?: (number | string | Date)[],
 
     // --------------------------------------------
     // [Properties below only for 'category' axis]:

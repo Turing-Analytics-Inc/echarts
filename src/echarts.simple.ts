@@ -32,7 +32,6 @@ import {install as AriaComponent} from './component/aria/install';
 import {install as DatasetComponent} from './component/dataset/install';
 
 use([CanvasRenderer]);
-
 use([
     LineChart,
     BarChart,

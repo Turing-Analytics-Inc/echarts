@@ -43367,7 +43367,7 @@
     function (_super) {
       __extends(Axis2D, _super);
 
-      function Axis2D(dim, scale, coordExtent, axisType, position, useY) {
+      function Axis2D(dim, scale, coordExtent, axisType, position) {
         var _this = _super.call(this, dim, scale, coordExtent) || this;
         /**
          * Index of axis, can be used as key
@@ -43378,7 +43378,6 @@
         _this.index = 0;
         _this.type = axisType || 'value';
         _this.position = position || 'bottom';
-        _this.useY = useY;
         return _this;
       }
 
