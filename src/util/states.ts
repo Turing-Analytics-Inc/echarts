@@ -626,6 +626,9 @@ export function handleGlobalMouseOverForHighDown(
         if (ecData.focus === 'self') {
             blurComponent(ecData.componentMainType, ecData.componentIndex, api);
         }
+        api.dispatchAction(extend(ecData, {
+            type: 'hover'
+        }));
         // Other than series, component that not support `findHighDownDispatcher` will
         // also use it. But in this case, highlight/downplay are only supported in
         // mouse hover but not in dispatchAction.

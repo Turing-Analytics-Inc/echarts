@@ -79,6 +79,7 @@ under the License.
                 treemap: 'descendant',
                 tree: 'ancestor'
             }
+            console.log("all charts",allChartsOptions);
             allChartsOptions.forEach(function (chartOption) {
                 chartOption.series.forEach(function (series) {
                     series.emphasis = series.emphasis || {};
@@ -88,7 +89,7 @@ under the License.
                         const oldRenderItem = series.renderItem;
                         series.renderItem = function () {
                             const ret = oldRenderItem.apply(this, arguments);
-                            ret.focus = 'self';
+                            ret.focus = 'none';
                             ret.blur = {
                                 style: {
                                     stroke: null
@@ -123,7 +124,9 @@ under the License.
                 document.querySelector('#main').appendChild(dom);
 
                 const chart = echarts.init(dom);
-
+                chart.on('hover',function(e){
+                    console.log(chartOption.series[e.seriesIndex]);
+                });
                 chart.setOption(chartOption);
 
                 charts.push(chart);
@@ -142,10 +145,7 @@ under the License.
                                 color: blurOpts.grayColor ? '#aaa' : null,
                                 opacity: blurOpts.opacity
                             },
-                            lineStyle: {
-                                color: blurOpts.grayColor ? '#aaa' : null,
-                                opacity: blurOpts.opacity
-                            },
+                          
                             areaStyle: {
                                 color: blurOpts.grayColor ? '#aaa' : null,
                                 opacity: blurOpts.opacity

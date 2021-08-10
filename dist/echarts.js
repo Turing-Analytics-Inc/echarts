@@ -11321,6 +11321,9 @@ function handleGlobalMouseOverForHighDown(dispatcher, e2, api) {
     if (ecData.focus === "self") {
       blurComponent(ecData.componentMainType, ecData.componentIndex, api);
     }
+    api.dispatchAction(extend(ecData, {
+      type: "hover"
+    }));
     enterEmphasisWhenMouseOver(dispatcher, e2);
   }
 }
@@ -33331,6 +33334,8 @@ function install3(registers) {
       }
       data.setVisual("legendLineStyle", lineStyle);
     }
+  });
+  registers.registerAction({type: "hover", event: "hover", update: "none"}, function() {
   });
   registers.registerProcessor(registers.PRIORITY.PROCESSOR.STATISTIC, dataSample("line"));
 }

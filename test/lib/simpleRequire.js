@@ -57,7 +57,6 @@
 
     // Promise to get modules exports.
     var mods = {};
-
     function handleLoadError(url, resolve, reject) {
         var errMsg = 'require: failed to load ' + url;
         if (typeof __VRT_LOAD_ERROR__ !== 'undefined') {
