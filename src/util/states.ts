@@ -646,8 +646,10 @@ export function handleGlboalMouseOutForHighDown(
     }
 
     allLeaveBlur(api);
-
     const ecData = getECData(dispatcher);
+    api.dispatchAction(extend(ecData, {
+        type: 'lineBlur'
+    }));
     const { dispatchers } = findComponentHighDownDispatchers(
         ecData.componentMainType, ecData.componentIndex, ecData.componentHighDownName, api
     );

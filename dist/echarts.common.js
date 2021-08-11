@@ -37138,8 +37138,49 @@
     });
 
     var inner$4 = makeInner();
+
+    function tickValuesToNumbers(axis, values) {
+      var nums = values.map(function (val) {
+        if (isString(val)) {
+          return axis.model.get('data').indexOf(val);
+        } else if (val instanceof Date) {
+          return val.getTime();
+        } else {
+          return val;
+        }
+      });
+
+      if (axis.type === 'time' && nums.length > 0) {
+        // Time axis needs duplicate first/last tick (see TimeScale.getTicks())
+        // The first and last tick/label don't get drawn
+        nums.sort();
+        nums.unshift(nums[0]);
+        nums.push(nums[nums.length - 1]);
+      }
+
+      return nums;
+    }
+
     function createAxisLabels(axis) {
-      // Only ordinal scale support tick interval
+      var custom = axis.getLabelModel().get('customValues');
+
+      if (custom) {
+        var labelFormatter_1 = makeLabelFormatter(axis);
+        return {
+          labels: tickValuesToNumbers(axis, custom).map(function (numval) {
+            var tick = {
+              value: numval
+            };
+            return {
+              formattedLabel: labelFormatter_1(tick),
+              rawLabel: axis.scale.getLabel(tick),
+              tickValue: numval
+            };
+          })
+        };
+      } // Only ordinal scale support tick interval
+
+
       return axis.type === 'category' ? makeCategoryLabels(axis) : makeRealNumberLabels(axis);
     }
     /**
@@ -37152,7 +37193,15 @@
      */
 
     function createAxisTicks(axis, tickModel) {
-      // Only ordinal scale support tick interval
+      var custom = axis.getTickModel().get('customValues');
+
+      if (custom) {
+        return {
+          ticks: tickValuesToNumbers(axis, custom)
+        };
+      } // Only ordinal scale support tick interval
+
+
       return axis.type === 'category' ? makeCategoryTicks(axis, tickModel) : {
         ticks: map(axis.scale.getTicks(), function (tick) {
           return tick.value;

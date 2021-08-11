@@ -127,6 +127,9 @@ under the License.
                 chart.on('hover',function(e){
                     console.log(chartOption.series[e.seriesIndex]);
                 });
+                chart.on('lineBlur',function(e){
+                    console.log("blurred",chartOption.series[e.seriesIndex]);
+                });
                 chart.setOption(chartOption);
 
                 charts.push(chart);
