@@ -41,7 +41,7 @@ import {
 import { extend, indexOf, isArrayLike, isObject, keys, isArray, each } from 'zrender/src/core/util';
 import { getECData } from './innerStore';
 import * as colorTool from 'zrender/src/tool/color';
-import SeriesData from '../data/SeriesData';
+import List from '../data/List';
 import SeriesModel from '../model/Series';
 import { CoordinateSystemMaster, CoordinateSystem } from '../coord/CoordinateSystem';
 import { queryDataIndex, makeInner } from './model';
@@ -236,17 +236,9 @@ function createEmphasisDefaultState(
         const fromStroke = hasSelect ? (store.selectStroke || store.normalStroke) : store.normalStroke;
         if (hasFillOrStroke(fromFill) || hasFillOrStroke(fromStroke)) {
             state = state || {};
-            let emphasisStyle = state.style || {};
-
-            // inherit case
-            if (emphasisStyle.fill === 'inherit') {
-                cloned = true;
-                state = extend({}, state);
-                emphasisStyle = extend({}, emphasisStyle);
-                emphasisStyle.fill = fromFill;
-            }
             // Apply default color lift
-            else if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
+            let emphasisStyle = state.style || {};
+            if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
                 cloned = true;
                 // Not modify the original value.
                 state = extend({}, state);
@@ -422,7 +414,7 @@ export function blurSeries(
     const ecModel = api.getModel();
     blurScope = blurScope || 'coordinateSystem';
 
-    function leaveBlurOfIndices(data: SeriesData, dataIndices: ArrayLike<number>) {
+    function leaveBlurOfIndices(data: List, dataIndices: ArrayLike<number>) {
         for (let i = 0; i < dataIndices.length; i++) {
             const itemEl = data.getItemGraphicEl(dataIndices[i]);
             itemEl && leaveBlur(itemEl);
@@ -634,6 +626,9 @@ export function handleGlobalMouseOverForHighDown(
         if (ecData.focus === 'self') {
             blurComponent(ecData.componentMainType, ecData.componentIndex, api);
         }
+        api.dispatchAction(extend(ecData, {
+            type: 'hover'
+        }));
         // Other than series, component that not support `findHighDownDispatcher` will
         // also use it. But in this case, highlight/downplay are only supported in
         // mouse hover but not in dispatchAction.
@@ -651,8 +646,10 @@ export function handleGlboalMouseOutForHighDown(
     }
 
     allLeaveBlur(api);
-
     const ecData = getECData(dispatcher);
+    api.dispatchAction(extend(ecData, {
+        type: 'lineBlur'
+    }));
     const { dispatchers } = findComponentHighDownDispatchers(
         ecData.componentMainType, ecData.componentIndex, ecData.componentHighDownName, api
     );

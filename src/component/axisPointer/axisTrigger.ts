@@ -119,7 +119,6 @@ export default function axisTrigger(
     const dispatchAction = payload.dispatchAction || bind(api.dispatchAction, api);
     const coordSysAxesInfo = (ecModel.getComponent('axisPointer') as AxisPointerModel)
         .coordSysAxesInfo as CollectedCoordInfo;
-
     // Pending
     // See #6121. But we are not able to reproduce it yet.
     if (!coordSysAxesInfo) {
@@ -157,7 +156,12 @@ export default function axisTrigger(
         showPointer: curry(showPointer, showValueMap),
         showTooltip: curry(showTooltip, dataByCoordSys)
     };
+    const xAxisOption:any = ecModel.option.xAxis;
+    let useY:boolean;
+    if (xAxisOption && xAxisOption.length > 0) {
 
+         useY = xAxisOption[0].useY;
+    }
     // Process for triggered axes.
     each(coordSysAxesInfo.coordSysMap, function (coordSys, coordSysKey) {
         // If a point given, it must be contained by the coordinate system.
@@ -172,7 +176,16 @@ export default function axisTrigger(
                 if (val == null && !isIllegalPoint) {
                     val = axis.pointToData(point);
                 }
-                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload);
+                let yVal;
+
+                if (axis.dim === 'x' && useY) {
+                    const yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey]['yAxis.value||yAxis'];
+                    if (yAxis) {
+                        yVal = yAxis.axis.pointToData(point);
+                    }
+                }
+
+                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload, yVal);
             }
         });
     });
@@ -216,10 +229,10 @@ function processOnAxis(
         showTooltip: Curry1<typeof showTooltip, DataByCoordSysCollection>
     },
     noSnap: boolean,
-    outputFinder: ModelFinderObject
+    outputFinder: ModelFinderObject,
+    yValue:AxisValue = null
 ) {
     const axis = axisInfo.axis;
-
     if (axis.scale.isBlank() || !axis.containData(newValue)) {
         return;
     }
@@ -228,9 +241,8 @@ function processOnAxis(
         updaters.showPointer(axisInfo, newValue);
         return;
     }
-
     // Heavy calculation. So put it after axis.containData checking.
-    const payloadInfo = buildPayloadsBySeries(newValue, axisInfo);
+    const payloadInfo = buildPayloadsBySeries(newValue, axisInfo, yValue);
     const payloadBatch = payloadInfo.payloadBatch;
     const snapToValue = payloadInfo.snapToValue;
 
@@ -254,17 +266,21 @@ function processOnAxis(
     updaters.showTooltip(axisInfo, payloadInfo, snapToValue);
 }
 
-function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
+function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo, yValue: AxisValue = null) {
     const axis = axisInfo.axis;
     const dim = axis.dim;
+
     let snapToValue = value;
     const payloadBatch: BatchItem[] = [];
     let minDist = Number.MAX_VALUE;
     let minDiff = -1;
-
     each(axisInfo.seriesModels, function (series, idx) {
         const dataDim = series.getData().mapDimensionsAll(dim);
+        if (yValue) {
+            dataDim.push('y');
+        }
         let seriesNestestValue;
+        let seriesNestestValueDim2:any;
         let dataIndices;
 
         if (series.getAxisTooltipData) {
@@ -285,6 +301,10 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
                 return;
             }
             seriesNestestValue = series.getData().get(dataDim[0], dataIndices[0]);
+            if (dataDim.length > 1) {
+                seriesNestestValueDim2 = series.getData().get(dataDim[1], dataIndices[0]);
+            }
+
         }
 
         if (seriesNestestValue == null || !isFinite(seriesNestestValue)) {
@@ -292,7 +312,11 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
         }
 
         const diff = value as number - seriesNestestValue;
-        const dist = Math.abs(diff);
+        let diff2 = 0;
+        if (yValue && seriesNestestValueDim2 && isFinite(seriesNestestValueDim2)) {
+             diff2 = Math.abs((yValue as number) - seriesNestestValueDim2);
+        }
+        const dist = Math.abs(diff) + diff2;
         // Consider category case
         if (dist <= minDist) {
             if (dist < minDist || (diff >= 0 && minDiff < 0)) {
@@ -310,7 +334,9 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
             });
         }
     });
-
+    if (yValue) {
+        payloadBatch.splice(1, payloadBatch.length - 1);
+    }
     return {
         payloadBatch: payloadBatch,
         snapToValue: snapToValue

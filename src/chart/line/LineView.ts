@@ -43,7 +43,7 @@ import type {
     ECElement,
     DisplayState,
     LabelOption,
-    ParsedValue,
+    ParsedValue
 } from '../../util/types';
 import type OrdinalScale from '../../scale/Ordinal';
 import type Axis2D from '../../coord/cartesian/Axis2D';
@@ -899,7 +899,7 @@ class LineView extends ChartView {
             componentIndex: seriesModel.componentIndex,
             seriesIndex: seriesModel.seriesIndex,
             seriesName: seriesModel.name,
-            seriesType: 'line',
+            seriesType: 'line'
         };
     }
 

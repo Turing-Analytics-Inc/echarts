@@ -20,15 +20,16 @@
 import {
     TextCommonOption, LineStyleOption, OrdinalRawValue, ZRColor,
     AreaStyleOption, ComponentOption, ColorString,
-    AnimationOptionMixin, Dictionary, ScaleDataValue, CommonAxisPointerOption
+    AnimationOptionMixin, Dictionary, ScaleDataValue
 } from '../util/types';
 
 
 export const AXIS_TYPES = {value: 1, category: 1, time: 1, log: 1} as const;
 export type OptionAxisType = keyof typeof AXIS_TYPES;
 
-export interface AxisBaseOptionCommon extends ComponentOption,
-    AnimationOptionMixin {
+
+export interface AxisBaseOption extends ComponentOption,
+    AnimationOptionMixin {  // Support transition animation
     type?: OptionAxisType;
     show?: boolean;
     // Inverse the axis.
@@ -54,106 +55,73 @@ export interface AxisBaseOptionCommon extends ComponentOption,
         show?: boolean;
     };
 
-    axisLabel?: AxisLabelBaseOption;
-
-    axisPointer?: CommonAxisPointerOption;
+    axisPointer?: any; // FIXME:TS axisPointerOption type?
     axisLine?: AxisLineOption;
     axisTick?: AxisTickOption;
+    axisLabel?: AxisLabelOption;
     minorTick?: MinorTickOption;
     splitLine?: SplitLineOption;
     minorSplitLine?: MinorSplitLineOption;
     splitArea?: SplitAreaOption;
 
-    /**
-     * Min value of the axis. can be:
-     * + ScaleDataValue
-     * + 'dataMin': use the min value in data.
-     * + null/undefined: auto decide min value (consider pretty look and boundaryGap).
-     */
+    // The gap at both ends of the axis.
+    // For category axis: boolean.
+    // For value axis: [GAP, GAP], where
+    // `GAP` can be an absolute pixel number (like `35`), or percent (like `'30%'`)
+    boundaryGap?: boolean | [number | string, number | string];
+
+    // Min value of the axis. can be:
+    // + ScaleDataValue
+    // + 'dataMin': use the min value in data.
+    // + null/undefined: auto decide min value (consider pretty look and boundaryGap).
     min?: ScaleDataValue | 'dataMin' | ((extent: {min: number, max: number}) => ScaleDataValue);
-    /**
-     * Max value of the axis. can be:
-     * + ScaleDataValue
-     * + 'dataMax': use the max value in data.
-     * + null/undefined: auto decide max value (consider pretty look and boundaryGap).
-     */
+    // Max value of the axis. can be:
+    // + ScaleDataValue
+    // + 'dataMax': use the max value in data.
+    // + null/undefined: auto decide max value (consider pretty look and boundaryGap).
     max?: ScaleDataValue | 'dataMax' | ((extent: {min: number, max: number}) => ScaleDataValue);
+    // Optional value can be:
+    // + `false`: always include value 0.
+    // + `true`: the extent do not consider value 0.
+    scale?: boolean;
 
-}
 
-interface NumericAxisBaseOptionCommon extends AxisBaseOptionCommon {
-    /*
-     * The gap at both ends of the axis.
-     * [GAP, GAP], where
-     * `GAP` can be an absolute pixel number (like `35`), or percent (like `'30%'`)
-     */
-    boundaryGap?: [number | string, number | string]
+    // --------------------------------------------
+    // [Properties below only for 'category' axis]:
 
-    /**
-     * AxisTick and axisLabel and splitLine are caculated based on splitNumber.
-     */
-    splitNumber?: number;
-    /**
-     * Interval specifies the span of the ticks is mandatorily.
-     */
-    interval?: number;
-    /**
-     * Specify min interval when auto calculate tick interval.
-     */
-    minInterval?: number;
-    /**
-     * Specify max interval when auto calculate tick interval.
-     */
-    maxInterval?: number;
-}
-
-export interface CategoryAxisBaseOption extends AxisBaseOptionCommon {
-    type?: 'category';
-    boundaryGap?: boolean
-    axisLabel?: AxisLabelOption<'category'> & {
-        interval?: 'auto' | number | ((index: number, value: string) => boolean)
-    };
+    // Set false to faster category collection.
+    // Only usefull in the case like: category is
+    // ['2012-01-01', '2012-01-02', ...], where the input
+    // data has been ensured not duplicate and is large data.
+    // null means "auto":
+    // if axis.data provided, do not deduplication,
+    // else do deduplication.
+    deduplication?: boolean;
     data?: (OrdinalRawValue | {
         value: OrdinalRawValue;
         textStyle?: TextCommonOption;
     })[];
-    /*
-     * Set false to faster category collection.
-     * Only usefull in the case like: category is
-     * ['2012-01-01', '2012-01-02', ...], where the input
-     * data has been ensured not duplicate and is large data.
-     * null means "auto":
-     * if axis.data provided, do not deduplication,
-     * else do deduplication.
-     */
-    deduplication?: boolean;
 
-    axisTick?: AxisBaseOptionCommon['axisTick'] & {
-        // If tick is align with label when boundaryGap is true
-        alignWithLabel?: boolean,
-        interval?: 'auto' | number | ((index: number, value: string) => boolean)
-    }
-}
-export interface ValueAxisBaseOption extends NumericAxisBaseOptionCommon {
-    type?: 'value';
-    axisLabel?: AxisLabelOption<'value'>;
 
-    /**
-     * Optional value can be:
-     * + `false`: always include value 0.
-     * + `false`: always include value 0.
-     */
-     scale?: boolean;
-}
-export interface LogAxisBaseOption extends NumericAxisBaseOptionCommon {
-    type?: 'log';
-    axisLabel?: AxisLabelOption<'log'>;
+    // ------------------------------------------------------
+    // [Properties below only for 'value'/'log'/'time' axes]:
+
+    // AxisTick and axisLabel and splitLine are caculated based on splitNumber.
+    splitNumber?: number;
+    // Interval specifies the span of the ticks is mandatorily.
+    interval?: number;
+    // Specify min interval when auto calculate tick interval.
+    minInterval?: number;
+    // Specify max interval when auto calculate tick interval.
+    maxInterval?: number;
+
+
+    // ---------------------------------------
+    // [Properties below only for 'log' axis]:
+
     logBase?: number;
 }
-export interface TimeAxisBaseOption extends NumericAxisBaseOptionCommon {
-    type?: 'time';
-    axisLabel?: AxisLabelOption<'time'>;
-}
+
 interface AxisNameTextStyleOption extends TextCommonOption {
     rich?: Dictionary<TextCommonOption>
 }
@@ -165,7 +133,7 @@ interface AxisLineOption {
     // The arrow at both ends the the axis.
     symbol?: string | [string, string],
     symbolSize?: number[],
-    symbolOffset?: string | number | (string | number)[],
+    symbolOffset?: number[],
     lineStyle?: LineStyleOption,
 }
 
@@ -176,13 +144,19 @@ interface AxisTickOption {
     // The length of axisTick.
     length?: number,
     lineStyle?: LineStyleOption
+    customValues?: (number | string | Date)[],
+
+    // --------------------------------------------
+    // [Properties below only for 'category' axis]:
+
+    // If tick is align with label when boundaryGap is true
+    alignWithLabel?: boolean,
+    interval?: 'auto' | number | ((index: number, value: string) => boolean)
 }
 
-type AxisLabelValueFormatter = (value: number, index: number) => string;
-type AxisLabelCategoryFormatter = (value: string, index: number) => string;
+export type AxisLabelFormatterOption = string | ((value: OrdinalRawValue | number, index: number) => string);
 
-// export type AxisLabelFormatterOption = string | ((value: OrdinalRawValue | number, index: number) => string);
-type TimeAxisLabelUnitFormatter = AxisLabelValueFormatter | string[] | string;
+type TimeAxisLabelUnitFormatter = AxisLabelFormatterOption | string[];
 
 export type TimeAxisLabelFormatterOption = string
     | ((value: number, index: number, extra: {level: number}) => string)
@@ -198,14 +172,7 @@ export type TimeAxisLabelFormatterOption = string
         inherit?: boolean
     };
 
-type LabelFormatters = {
-    value: AxisLabelValueFormatter | string
-    log: AxisLabelValueFormatter | string
-    category: AxisLabelCategoryFormatter | string
-    time: TimeAxisLabelFormatterOption
-};
-
-interface AxisLabelBaseOption extends Omit<TextCommonOption, 'color'> {
+interface AxisLabelOption extends Omit<TextCommonOption, 'color'> {
     show?: boolean,
     // Whether axisLabel is inside the grid or outside the grid.
     inside?: boolean,
@@ -215,16 +182,19 @@ interface AxisLabelBaseOption extends Omit<TextCommonOption, 'color'> {
     // true | false | null/undefined (auto)
     showMaxLabel?: boolean,
     margin?: number,
-    rich?: Dictionary<TextCommonOption>
-    /**
-     * If hide overlapping labels.
-     */
-    hideOverlap?: boolean;
+    // value is supposed to be OptionDataPrimitive but for time axis, it is time stamp.
+    formatter?: AxisLabelFormatterOption | TimeAxisLabelFormatterOption,
+    customValues?: (number | string | Date)[],
+
+    // --------------------------------------------
+    // [Properties below only for 'category' axis]:
+
+    interval?: 'auto' | number | ((index: number, value: string) => boolean)
+
     // Color can be callback
     color?: ColorString | ((value?: string | number, index?: number) => ColorString)
-}
-interface AxisLabelOption<TType extends OptionAxisType> extends AxisLabelBaseOption {
-    formatter?: LabelFormatters[TType]
+
+    rich?: Dictionary<TextCommonOption>
 }
 
 interface MinorTickOption {
@@ -252,7 +222,3 @@ interface SplitAreaOption {
     // colors will display in turn
     areaStyle?: AreaStyleOption<ZRColor[]>
 }
-
-
-export type AxisBaseOption = ValueAxisBaseOption | LogAxisBaseOption
-    | CategoryAxisBaseOption | TimeAxisBaseOption | AxisBaseOptionCommon;
