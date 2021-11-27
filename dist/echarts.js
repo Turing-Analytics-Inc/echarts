@@ -73930,7 +73930,7 @@
       var yAxisOption = ecModel.option.yAxis;
       var yAxisScaleToX = 1;
 
-      if (yAxisOption.lengh > 1) {
+      if (yAxisOption && yAxisOption.length > 0) {
         yAxisScaleToX = (_a = yAxisOption[0].yAxisScaleToX) !== null && _a !== void 0 ? _a : 1;
       }
 

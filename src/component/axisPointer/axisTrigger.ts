@@ -159,7 +159,7 @@ export default function axisTrigger(
     const xAxisOption:any = ecModel.option.xAxis;
     const yAxisOption:any = ecModel.option.yAxis;
     let yAxisScaleToX = 1;
-    if (yAxisOption.length > 0) {
+    if (yAxisOption && yAxisOption.length > 0) {
         yAxisScaleToX = yAxisOption[0].yAxisScaleToX ?? 1;
     }
     let useY:boolean;
