@@ -182,12 +182,22 @@ export default function axisTrigger(
                 }
                 let yVal;
                 if (axis.dim === 'x' && useY) {
-                    const yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey]['yAxis.value||yAxis'];
+                    let yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey]['yAxis.value||yAxis'];
+                    if (!yAxis) {
+                        const keys = Object.keys(coordSysAxesInfo.coordSysAxesInfo[coordSysKey]);
+                        const yAxisIndex = keys.findIndex(key => {
+                            const idx = key.indexOf('yAxis') >= 0;
+                            return idx;
+                        });
+                        if (yAxisIndex >= 0) {
+                            yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey][keys[yAxisIndex]];
+                        }
+                    }
                     if (yAxis) {
                         yVal = yAxis.axis.pointToData(point);
                     }
                 }
-                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload, yVal,yAxisScaleToX);
+                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload, yVal, yAxisScaleToX);
             }
         });
     });
@@ -282,14 +292,14 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo, yV
         if (yValue) {
             dataDim.push('y');
         }
-        let seriesNestestValue;
-        let seriesNestestValueDim2:any;
+        let nearestXValue;
+        let nearestYValue:any;
         let dataIndices;
-
+        const nearestXYPoints = [];
         if (series.getAxisTooltipData) {
             const result = series.getAxisTooltipData(dataDim, value, axis);
             dataIndices = result.dataIndices;
-            seriesNestestValue = result.nestestValue;
+            nearestXValue = result.nestestValue;
         }
         else {
             dataIndices = series.getData().indicesOfNearest(
@@ -303,26 +313,49 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo, yV
             if (!dataIndices.length) {
                 return;
             }
-            seriesNestestValue = series.getData().get(dataDim[0], dataIndices[0]);
-            if (dataDim.length > 1) {
-                seriesNestestValueDim2 = series.getData().get(dataDim[1], dataIndices[0]);
+            nearestXValue = series.getData().get(dataDim[0], dataIndices[0]);
+            const pointsToCheck = 4;
+            if (!series.getAxisTooltipData && dataIndices.length > 0 && dataDim.length > 1) {
+                const startingX = Math.max(0, dataIndices[0] - pointsToCheck);
+                const endingX = Math.min(dataIndices[0] + pointsToCheck, series.option.data?.length ?? 0);
+                for (let i = startingX; i < endingX; i++) {
+                    nearestXValue = series.getData().get(dataDim[0], i);
+                    //has y dimension so check previous and next points
+                    nearestYValue = series.getData().get(dataDim[1], i);
+                    nearestXYPoints.push([nearestXValue, nearestYValue, i]);
+                }
             }
         }
-        if (seriesNestestValue == null || !isFinite(seriesNestestValue)) {
+        if (nearestXValue == null || !isFinite(nearestXValue)) {
             return;
         }
-        const diff = value as number - seriesNestestValue;
-        let diff2 = 0;
-        if (yValue && seriesNestestValueDim2 && isFinite(seriesNestestValueDim2)) {
-             diff2 = Math.abs((yValue as number) - seriesNestestValueDim2) * yAxisScaleToX;
+        let yDiff = 0;
+        if (yValue && nearestYValue && isFinite(nearestYValue)) {
+            yDiff = Math.abs((yValue as number) * yAxisScaleToX - nearestYValue * yAxisScaleToX) ;
         }
-        const dist = Math.abs(diff) + diff2;
+        const xDiff = value as number - nearestXValue;
+        let dist = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+        for (const xyPoint of nearestXYPoints) {
+            const [x, y, dataIndex] = xyPoint;
+            const mouseX = value as number;
+            const mouseY = yValue as number;
+            const xDiff = Math.abs(mouseX - x);
+            const yDiff = Math.abs(Math.abs(mouseY) * yAxisScaleToX - Math.abs(y) * yAxisScaleToX) ;
+            const pointDistance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+            if (pointDistance < dist) {
+                nearestXValue = x;
+                dist = pointDistance;
+                dataIndices = [dataIndex];
+            }
+        }
+        //console.log(series.name, yDiff, xDiff, dist);
+        // console.log(series.name,dist);
         // Consider category case
         if (dist <= minDist) {
-            if (dist < minDist || (diff >= 0 && minDiff < 0)) {
+            if (dist < minDist || (xDiff >= 0 && minDiff < 0)) {
                 minDist = dist;
-                minDiff = diff;
-                snapToValue = seriesNestestValue;
+                minDiff = xDiff;
+                snapToValue = nearestXValue;
                 payloadBatch.length = 0;
             }
             each(dataIndices, function (dataIndex) {
