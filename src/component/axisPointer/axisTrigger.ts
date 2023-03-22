@@ -119,7 +119,6 @@ export default function axisTrigger(
     const dispatchAction = payload.dispatchAction || bind(api.dispatchAction, api);
     const coordSysAxesInfo = (ecModel.getComponent('axisPointer') as AxisPointerModel)
         .coordSysAxesInfo as CollectedCoordInfo;
-
     // Pending
     // See #6121. But we are not able to reproduce it yet.
     if (!coordSysAxesInfo) {
@@ -157,7 +156,16 @@ export default function axisTrigger(
         showPointer: curry(showPointer, showValueMap),
         showTooltip: curry(showTooltip, dataByCoordSys)
     };
-
+    const xAxisOption:any = ecModel.option.xAxis;
+    const yAxisOption:any = ecModel.option.yAxis;
+    let yAxisScaleToX = 1;
+    if (yAxisOption && yAxisOption.length > 0) {
+        yAxisScaleToX = yAxisOption[0].yAxisScaleToX ?? 1;
+    }
+    let useY:boolean;
+    if (xAxisOption && xAxisOption.length > 0) {
+         useY = xAxisOption[0].useY;
+    }
     // Process for triggered axes.
     each(coordSysAxesInfo.coordSysMap, function (coordSys, coordSysKey) {
         // If a point given, it must be contained by the coordinate system.
@@ -172,7 +180,24 @@ export default function axisTrigger(
                 if (val == null && !isIllegalPoint) {
                     val = axis.pointToData(point);
                 }
-                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload);
+                let yVal;
+                if (axis.dim === 'x' && useY) {
+                    let yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey]['yAxis.value||yAxis'];
+                    if (!yAxis) {
+                        const keys = Object.keys(coordSysAxesInfo.coordSysAxesInfo[coordSysKey]);
+                        const yAxisIndex = keys.findIndex(key => {
+                            const idx = key.indexOf('yAxis') >= 0;
+                            return idx;
+                        });
+                        if (yAxisIndex >= 0) {
+                            yAxis = coordSysAxesInfo.coordSysAxesInfo[coordSysKey][keys[yAxisIndex]];
+                        }
+                    }
+                    if (yAxis) {
+                        yVal = yAxis.axis.pointToData(point);
+                    }
+                }
+                val != null && processOnAxis(axisInfo, val, updaters, false, outputPayload, yVal, yAxisScaleToX);
             }
         });
     });
@@ -216,10 +241,11 @@ function processOnAxis(
         showTooltip: Curry1<typeof showTooltip, DataByCoordSysCollection>
     },
     noSnap: boolean,
-    outputFinder: ModelFinderObject
+    outputFinder: ModelFinderObject,
+    yValue:AxisValue = null,
+    yAxisScaleToX:number = 1
 ) {
     const axis = axisInfo.axis;
-
     if (axis.scale.isBlank() || !axis.containData(newValue)) {
         return;
     }
@@ -228,9 +254,8 @@ function processOnAxis(
         updaters.showPointer(axisInfo, newValue);
         return;
     }
-
     // Heavy calculation. So put it after axis.containData checking.
-    const payloadInfo = buildPayloadsBySeries(newValue, axisInfo);
+    const payloadInfo = buildPayloadsBySeries(newValue, axisInfo, yValue, yAxisScaleToX);
     const payloadBatch = payloadInfo.payloadBatch;
     const snapToValue = payloadInfo.snapToValue;
 
@@ -254,23 +279,27 @@ function processOnAxis(
     updaters.showTooltip(axisInfo, payloadInfo, snapToValue);
 }
 
-function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
+function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo, yValue: AxisValue = null, yAxisScaleToX:number = 1) {
     const axis = axisInfo.axis;
     const dim = axis.dim;
+
     let snapToValue = value;
     const payloadBatch: BatchItem[] = [];
     let minDist = Number.MAX_VALUE;
     let minDiff = -1;
-
     each(axisInfo.seriesModels, function (series, idx) {
         const dataDim = series.getData().mapDimensionsAll(dim);
-        let seriesNestestValue;
+        if (yValue) {
+            dataDim.push('y');
+        }
+        let nearestXValue;
+        let nearestYValue:any;
         let dataIndices;
-
+        const nearestXYPoints = [];
         if (series.getAxisTooltipData) {
             const result = series.getAxisTooltipData(dataDim, value, axis);
             dataIndices = result.dataIndices;
-            seriesNestestValue = result.nestestValue;
+            nearestXValue = result.nestestValue;
         }
         else {
             dataIndices = series.getData().indicesOfNearest(
@@ -284,21 +313,50 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
             if (!dataIndices.length) {
                 return;
             }
-            seriesNestestValue = series.getData().get(dataDim[0], dataIndices[0]);
+            nearestXValue = series.getData().get(dataDim[0], dataIndices[0]);
+            const pointsToCheck = 4;
+            if (!series.getAxisTooltipData && dataIndices.length > 0 && dataDim.length > 1) {
+                const startingX = Math.max(0, dataIndices[0] - pointsToCheck);
+                // @ts-ignore
+                const endingX = Math.min(dataIndices[0] + pointsToCheck, series.option.data?.length ?? 0);
+                for (let i = startingX; i < endingX; i++) {
+                    nearestXValue = series.getData().get(dataDim[0], i);
+                    // has y dimension so check previous and next points
+                    nearestYValue = series.getData().get(dataDim[1], i);
+                    nearestXYPoints.push([nearestXValue, nearestYValue, i]);
+                }
+            }
         }
-
-        if (seriesNestestValue == null || !isFinite(seriesNestestValue)) {
+        if (nearestXValue == null || !isFinite(nearestXValue)) {
             return;
         }
-
-        const diff = value as number - seriesNestestValue;
-        const dist = Math.abs(diff);
+        let yDiff = 0;
+        if (yValue && nearestYValue && isFinite(nearestYValue)) {
+            yDiff = Math.abs((yValue as number) * yAxisScaleToX - nearestYValue * yAxisScaleToX) ;
+        }
+        const xDiff = value as number - nearestXValue;
+        let dist = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+        for (const xyPoint of nearestXYPoints) {
+            const [x, y, dataIndex] = xyPoint;
+            const mouseX = value as number;
+            const mouseY = yValue as number;
+            const xDiff = Math.abs(mouseX - x);
+            const yDiff = Math.abs(Math.abs(mouseY) * yAxisScaleToX - Math.abs(y) * yAxisScaleToX) ;
+            const pointDistance = Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+            if (pointDistance < dist) {
+                nearestXValue = x;
+                dist = pointDistance;
+                dataIndices = [dataIndex];
+            }
+        }
+        //console.log(series.name, yDiff, xDiff, dist);
+        // console.log(series.name,dist);
         // Consider category case
         if (dist <= minDist) {
-            if (dist < minDist || (diff >= 0 && minDiff < 0)) {
+            if (dist < minDist || (xDiff >= 0 && minDiff < 0)) {
                 minDist = dist;
-                minDiff = diff;
-                snapToValue = seriesNestestValue;
+                minDiff = xDiff;
+                snapToValue = nearestXValue;
                 payloadBatch.length = 0;
             }
             each(dataIndices, function (dataIndex) {
@@ -310,7 +368,9 @@ function buildPayloadsBySeries(value: AxisValue, axisInfo: CollectedAxisInfo) {
             });
         }
     });
-
+    if (yValue) {
+        payloadBatch.splice(1, payloadBatch.length - 1);
+    }
     return {
         payloadBatch: payloadBatch,
         snapToValue: snapToValue

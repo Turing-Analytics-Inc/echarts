@@ -48,10 +48,18 @@ export function install(registers: EChartsExtensionInstallRegisters) {
             data.setVisual('legendLineStyle', lineStyle);
         }
     });
-
+    registers.registerAction(
+        {type: 'hover', event: 'hover', update: 'none'},
+        function () {}
+    );
+    registers.registerAction(
+        {type: 'lineBlur', event: 'lineBlur', update: 'none'},
+        function () {}
+    );
     // Down sample after filter
     registers.registerProcessor(
         registers.PRIORITY.PROCESSOR.STATISTIC,
         dataSample('line')
     );
+
 }

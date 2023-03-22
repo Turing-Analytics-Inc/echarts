@@ -12261,31 +12261,26 @@
         var fromStroke = hasSelect ? store.selectStroke || store.normalStroke : store.normalStroke;
 
         if (hasFillOrStroke(fromFill) || hasFillOrStroke(fromStroke)) {
-          state = state || {};
-          var emphasisStyle = state.style || {}; // inherit case
+          state = state || {}; // Apply default color lift
 
-          if (emphasisStyle.fill === 'inherit') {
-            cloned = true;
+          var emphasisStyle = state.style || {};
+
+          if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
+            cloned = true; // Not modify the original value.
+
             state = extend({}, state);
-            emphasisStyle = extend({}, emphasisStyle);
-            emphasisStyle.fill = fromFill;
-          } // Apply default color lift
-          else if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
-              cloned = true; // Not modify the original value.
+            emphasisStyle = extend({}, emphasisStyle); // Already being applied 'emphasis'. DON'T lift color multiple times.
 
-              state = extend({}, state);
-              emphasisStyle = extend({}, emphasisStyle); // Already being applied 'emphasis'. DON'T lift color multiple times.
-
-              emphasisStyle.fill = liftColor(fromFill);
-            } // Not highlight stroke if fill has been highlighted.
-            else if (!hasFillOrStroke(emphasisStyle.stroke) && hasFillOrStroke(fromStroke)) {
-                if (!cloned) {
-                  state = extend({}, state);
-                  emphasisStyle = extend({}, emphasisStyle);
-                }
-
-                emphasisStyle.stroke = liftColor(fromStroke);
+            emphasisStyle.fill = liftColor(fromFill);
+          } // Not highlight stroke if fill has been highlighted.
+          else if (!hasFillOrStroke(emphasisStyle.stroke) && hasFillOrStroke(fromStroke)) {
+              if (!cloned) {
+                state = extend({}, state);
+                emphasisStyle = extend({}, emphasisStyle);
               }
+
+              emphasisStyle.stroke = liftColor(fromStroke);
+            }
 
           state.style = emphasisStyle;
         }
@@ -12641,10 +12636,13 @@
 
         if (ecData.focus === 'self') {
           blurComponent(ecData.componentMainType, ecData.componentIndex, api);
-        } // Other than series, component that not support `findHighDownDispatcher` will
+        }
+
+        api.dispatchAction(extend(ecData, {
+          type: 'hover'
+        })); // Other than series, component that not support `findHighDownDispatcher` will
         // also use it. But in this case, highlight/downplay are only supported in
         // mouse hover but not in dispatchAction.
-
 
         enterEmphasisWhenMouseOver(dispatcher, e);
       }
@@ -12656,6 +12654,9 @@
 
       allLeaveBlur(api);
       var ecData = getECData(dispatcher);
+      api.dispatchAction(extend(ecData, {
+        type: 'lineBlur'
+      }));
       var dispatchers = findComponentHighDownDispatchers(ecData.componentMainType, ecData.componentIndex, ecData.componentHighDownName, api).dispatchers;
 
       if (dispatchers) {
@@ -15790,23 +15791,23 @@
      */
 
     /*
-    * Licensed to the Apache Software Foundation (ASF) under one
-    * or more contributor license agreements.  See the NOTICE file
-    * distributed with this work for additional information
-    * regarding copyright ownership.  The ASF licenses this file
-    * to you under the Apache License, Version 2.0 (the
-    * "License"); you may not use this file except in compliance
-    * with the License.  You may obtain a copy of the License at
-    *
-    *   http://www.apache.org/licenses/LICENSE-2.0
-    *
-    * Unless required by applicable law or agreed to in writing,
-    * software distributed under the License is distributed on an
-    * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-    * KIND, either express or implied.  See the License for the
-    * specific language governing permissions and limitations
-    * under the License.
-    */
+     * Licensed to the Apache Software Foundation (ASF) under one
+     * or more contributor license agreements.  See the NOTICE file
+     * distributed with this work for additional information
+     * regarding copyright ownership.  The ASF licenses this file
+     * to you under the Apache License, Version 2.0 (the
+     * "License"); you may not use this file except in compliance
+     * with the License.  You may obtain a copy of the License at
+     *
+     *   http://www.apache.org/licenses/LICENSE-2.0
+     *
+     * Unless required by applicable law or agreed to in writing,
+     * software distributed under the License is distributed on an
+     * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+     * KIND, either express or implied.  See the License for the
+     * specific language governing permissions and limitations
+     * under the License.
+     */
 
     /**
      * Language: English.
@@ -19746,11 +19747,7 @@
 
 
       if (obj) {
-        var dimensions_1 = [];
-        each(obj, function (value, key) {
-          dimensions_1.push(key);
-        });
-        return dimensions_1;
+        return keys(obj);
       }
     } // Consider dimensions defined like ['A', 'price', 'B', 'price', 'C', 'price'],
     // which is reasonable. But dimension name is duplicated.
@@ -21231,7 +21228,7 @@
     /** @class */
     function () {
       function DataStore() {
-        this._chunks = []; // It will not be calculated util needed.
+        this._chunks = []; // It will not be calculated until needed.
 
         this._rawExtent = [];
         this._extent = [];
@@ -21649,7 +21646,7 @@
             // When the `value` is at the middle of `this.get(dim, i)` and `this.get(dim, i+1)`,
             // we'd better not push both of them to `nearestIndices`, otherwise it is easy to
             // get more than one item in `nearestIndices` (more specifically, in `tooltip`).
-            // So we chose the one that `diff >= 0` in this csae.
+            // So we choose the one that `diff >= 0` in this case.
             // But if `this.get(dim, i)` and `this.get(dim, j)` get the same value, both of them
             // should be push to `nearestIndices`.
             if (dist < minDist || dist === minDist && diff >= 0 && minDiff < 0) {
@@ -22001,7 +21998,7 @@
           maxArea = -1;
           nextRawIndex = frameStart;
           var firstNaNIndex = -1;
-          var countNaN = 0; // Find a point from current frame that construct a triangel with largest area with previous selected point
+          var countNaN = 0; // Find a point from current frame that construct a triangle with largest area with previous selected point
           // And the average of next frame.
 
           for (var idx = frameStart; idx < frameEnd; idx++) {
@@ -22797,8 +22794,8 @@
       var inlineName = multipleSeries ? seriesName : itemName;
       return createTooltipMarkup('section', {
         header: seriesName,
-        // When series name not specified, do not show a header line with only '-'.
-        // This case alway happen in tooltip.trigger: 'item'.
+        // When series name is not specified, do not show a header line with only '-'.
+        // This case always happens in tooltip.trigger: 'item'.
         noHeader: multipleSeries || !seriesNameSpecified,
         sortParam: sortParam,
         blocks: [createTooltipMarkup('nameValue', {
@@ -23410,7 +23407,7 @@
     }
 
     function dataTaskProgress(param, context) {
-      // Avoid repead cloneShallow when data just created in reset.
+      // Avoid repeat cloneShallow when data just created in reset.
       if (context.outputData && param.end > context.outputData.count()) {
         context.model.getRawData().cloneShallow(context.outputData);
       }
@@ -25167,7 +25164,7 @@
       }
     }
 
-    // Inlucdes: pieSelect, pieUnSelect, pieToggleSelect, mapSelect, mapUnSelect, mapToggleSelect
+    // Includes: pieSelect, pieUnSelect, pieToggleSelect, mapSelect, mapUnSelect, mapToggleSelect
 
     function createLegacyDataSelectAction(seriesType, ecRegisterAction) {
       function getSeriesIndices(ecModel, payload) {
@@ -35017,8 +35014,49 @@
     });
 
     var inner$5 = makeInner();
+
+    function tickValuesToNumbers(axis, values) {
+      var nums = values.map(function (val) {
+        if (isString(val)) {
+          return axis.model.get('data').indexOf(val);
+        } else if (val instanceof Date) {
+          return val.getTime();
+        } else {
+          return val;
+        }
+      });
+
+      if (axis.type === 'time' && nums.length > 0) {
+        // Time axis needs duplicate first/last tick (see TimeScale.getTicks())
+        // The first and last tick/label don't get drawn
+        nums.sort();
+        nums.unshift(nums[0]);
+        nums.push(nums[nums.length - 1]);
+      }
+
+      return nums;
+    }
+
     function createAxisLabels(axis) {
-      // Only ordinal scale support tick interval
+      var custom = axis.getLabelModel().get('customValues');
+
+      if (custom) {
+        var labelFormatter_1 = makeLabelFormatter(axis);
+        return {
+          labels: tickValuesToNumbers(axis, custom).map(function (numval) {
+            var tick = {
+              value: numval
+            };
+            return {
+              formattedLabel: labelFormatter_1(tick),
+              rawLabel: axis.scale.getLabel(tick),
+              tickValue: numval
+            };
+          })
+        };
+      } // Only ordinal scale support tick interval
+
+
       return axis.type === 'category' ? makeCategoryLabels(axis) : makeRealNumberLabels(axis);
     }
     /**
@@ -35031,7 +35069,15 @@
      */
 
     function createAxisTicks(axis, tickModel) {
-      // Only ordinal scale support tick interval
+      var custom = axis.getTickModel().get('customValues');
+
+      if (custom) {
+        return {
+          ticks: tickValuesToNumbers(axis, custom)
+        };
+      } // Only ordinal scale support tick interval
+
+
       return axis.type === 'category' ? makeCategoryTicks(axis, tickModel) : {
         ticks: map(axis.scale.getTicks(), function (tick) {
           return tick.value;
@@ -39041,7 +39087,7 @@
         var polyline = this._polyline;
         var polygon = this._polygon;
         var lineGroup = this._lineGroup;
-        var hasAnimation = seriesModel.get('animation');
+        var hasAnimation = !ecModel.ssr && seriesModel.isAnimationEnabled();
         var isAreaChart = !areaStyleModel.isEmpty();
         var valueOrigin = areaStyleModel.get('origin');
         var dataCoordInfo = prepareDataCoordInfo(coordSys, data, valueOrigin);
@@ -39421,8 +39467,8 @@
           seriesDuration = seriesDuration(null);
         }
 
-        var seriesDalay = seriesModel.get('animationDelay') || 0;
-        var seriesDalayValue = isFunction(seriesDalay) ? seriesDalay(null) : seriesDalay;
+        var seriesDelay = seriesModel.get('animationDelay') || 0;
+        var seriesDelayValue = isFunction(seriesDelay) ? seriesDelay(null) : seriesDelay;
         data.eachItemGraphicEl(function (symbol, idx) {
           var el = symbol;
 
@@ -39467,7 +39513,7 @@
               ratio = 1 - ratio;
             }
 
-            var delay = isFunction(seriesDalay) ? seriesDalay(idx) : seriesDuration * ratio + seriesDalayValue;
+            var delay = isFunction(seriesDelay) ? seriesDelay(idx) : seriesDuration * ratio + seriesDelayValue;
             var symbolPath = el.getSymbolPath();
             var text = symbolPath.getTextContent();
             el.attr({
@@ -39937,7 +39983,17 @@
 
           data.setVisual('legendLineStyle', lineStyle);
         }
-      }); // Down sample after filter
+      });
+      registers.registerAction({
+        type: 'hover',
+        event: 'hover',
+        update: 'none'
+      }, function () {});
+      registers.registerAction({
+        type: 'lineBlur',
+        event: 'lineBlur',
+        update: 'none'
+      }, function () {}); // Down sample after filter
 
       registers.registerProcessor(registers.PRIORITY.PROCESSOR.STATISTIC, dataSample('line'));
     }
@@ -39965,22 +40021,75 @@
 
         if (coordSys && coordSys.clampData) {
           // PENDING if clamp ?
-          var pt_1 = coordSys.dataToPoint(coordSys.clampData(value));
+          var clampData_1 = coordSys.clampData(value);
+          var pt_1 = coordSys.dataToPoint(clampData_1);
 
           if (startingAtTick) {
             each(coordSys.getAxes(), function (axis, idx) {
               // If axis type is category, use tick coords instead
-              if (axis.type === 'category') {
+              if (axis.type === 'category' && dims != null) {
                 var tickCoords = axis.getTicksCoords();
-                var tickIdx = coordSys.clampData(value)[idx]; // The index of rightmost tick of markArea is 1 larger than x1/y1 index
+                var targetTickId = clampData_1[idx]; // The index of rightmost tick of markArea is 1 larger than x1/y1 index
 
-                if (dims && (dims[idx] === 'x1' || dims[idx] === 'y1')) {
-                  tickIdx += 1;
+                var isEnd = dims[idx] === 'x1' || dims[idx] === 'y1';
+
+                if (isEnd) {
+                  targetTickId += 1;
+                } // The only contains one tick, tickCoords is
+                // like [{coord: 0, tickValue: 0}, {coord: 0}]
+                // to the length should always be larger than 1
+
+
+                if (tickCoords.length < 2) {
+                  return;
+                } else if (tickCoords.length === 2) {
+                  // The left value and right value of the axis are
+                  // the same. coord is 0 in both items. Use the max
+                  // value of the axis as the coord
+                  pt_1[idx] = axis.toGlobalCoord(axis.getExtent()[isEnd ? 1 : 0]);
+                  return;
                 }
 
-                tickIdx > tickCoords.length - 1 && (tickIdx = tickCoords.length - 1);
-                tickIdx < 0 && (tickIdx = 0);
-                tickCoords[tickIdx] && (pt_1[idx] = axis.toGlobalCoord(tickCoords[tickIdx].coord));
+                var leftCoord = void 0;
+                var coord = void 0;
+                var stepTickValue = 1;
+
+                for (var i = 0; i < tickCoords.length; i++) {
+                  var tickCoord = tickCoords[i].coord; // The last item of tickCoords doesn't contain
+                  // tickValue
+
+                  var tickValue = i === tickCoords.length - 1 ? tickCoords[i - 1].tickValue + stepTickValue : tickCoords[i].tickValue;
+
+                  if (tickValue === targetTickId) {
+                    coord = tickCoord;
+                    break;
+                  } else if (tickValue < targetTickId) {
+                    leftCoord = tickCoord;
+                  } else if (leftCoord != null && tickValue > targetTickId) {
+                    coord = (tickCoord + leftCoord) / 2;
+                    break;
+                  }
+
+                  if (i === 1) {
+                    // Here we assume the step of category axes is
+                    // the same
+                    stepTickValue = tickValue - tickCoords[0].tickValue;
+                  }
+                }
+
+                if (coord == null) {
+                  if (!leftCoord) {
+                    // targetTickId is smaller than all tick ids in the
+                    // visible area, use the leftmost tick coord
+                    coord = tickCoords[0].coord;
+                  } else if (leftCoord) {
+                    // targetTickId is larger than all tick ids in the
+                    // visible area, use the rightmost tick coord
+                    coord = tickCoords[tickCoords.length - 1].coord;
+                  }
+                }
+
+                pt_1[idx] = axis.toGlobalCoord(coord);
               }
             });
           } else {
@@ -40356,6 +40465,27 @@
       return distance * Math.cos(angle) * (isEnd ? 1 : -1);
     }
 
+    function getSectorCornerRadius(model, shape, zeroIfNull) {
+      var cornerRadius = model.get('borderRadius');
+
+      if (cornerRadius == null) {
+        return zeroIfNull ? {
+          cornerRadius: 0
+        } : null;
+      }
+
+      if (!isArray(cornerRadius)) {
+        cornerRadius = [cornerRadius, cornerRadius, cornerRadius, cornerRadius];
+      }
+
+      var dr = Math.abs(shape.r || 0 - shape.r0 || 0);
+      return {
+        cornerRadius: map(cornerRadius, function (cr) {
+          return parsePercent(cr, dr);
+        })
+      };
+    }
+
     var mathMax$6 = Math.max;
     var mathMin$6 = Math.min;
 
@@ -40488,6 +40618,8 @@
 
           if (coord.type === 'cartesian2d') {
             bgEl.setShape('r', barBorderRadius);
+          } else {
+            bgEl.setShape('cornerRadius', barBorderRadius);
           }
 
           bgEls[dataIndex] = bgEl;
@@ -40560,6 +40692,8 @@
 
               if (coord.type === 'cartesian2d') {
                 bgEl.setShape('r', barBorderRadius);
+              } else {
+                bgEl.setShape('cornerRadius', barBorderRadius);
               }
 
               bgEls[newIndex] = bgEl;
@@ -40953,7 +41087,7 @@
           var sectorShape = sector.shape;
           var animateProperty = isRadial ? 'r' : 'endAngle';
           var animateTarget = {};
-          sectorShape[animateProperty] = isRadial ? 0 : layout.startAngle;
+          sectorShape[animateProperty] = isRadial ? layout.r0 : layout.startAngle;
           animateTarget[animateProperty] = layout[animateProperty];
           (isUpdate ? updateProps : initProps)(sector, {
             shape: animateTarget // __value: typeof dataValue === 'string' ? parseInt(dataValue, 10) : dataValue
@@ -41103,7 +41237,13 @@
       var style = data.getItemVisual(dataIndex, 'style');
 
       if (!isPolar) {
-        el.setShape('r', itemModel.get(['itemStyle', 'borderRadius']) || 0);
+        var borderRadius = itemModel.get(['itemStyle', 'borderRadius']) || 0;
+        el.setShape('r', borderRadius);
+      } else if (!seriesModel.get('roundCap')) {
+        var sectorShape = el.shape;
+        var cornerRadius = getSectorCornerRadius(itemModel.getModel('itemStyle'), sectorShape, true);
+        extend(sectorShape, cornerRadius);
+        el.setShape(sectorShape);
       }
 
       el.useStyle(style);
@@ -42080,27 +42220,6 @@
           }
         }
       }
-    }
-
-    function getSectorCornerRadius(model, shape, zeroIfNull) {
-      var cornerRadius = model.get('borderRadius');
-
-      if (cornerRadius == null) {
-        return zeroIfNull ? {
-          cornerRadius: 0
-        } : null;
-      }
-
-      if (!isArray(cornerRadius)) {
-        cornerRadius = [cornerRadius, cornerRadius, cornerRadius, cornerRadius];
-      }
-
-      var dr = Math.abs(shape.r || 0 - shape.r0 || 0);
-      return {
-        cornerRadius: map(cornerRadius, function (cr) {
-          return parsePercent(cr, dr);
-        })
-      };
     }
 
     /**
@@ -44001,7 +44120,7 @@
           handleAutoShown: function () {
             return true;
           }
-        }); // FIXME Not use a seperate text group?
+        }); // FIXME Not use a separate text group?
 
         var transformGroup = new Group({
           x: opt.position[0],
@@ -44509,7 +44628,7 @@
             // in category axis.
             // (2) Compatible with previous version, which always use formatted label as
             // input. But in interval scale the formatted label is like '223,445', which
-            // maked user repalce ','. So we modify it to return original val but remain
+            // maked user replace ','. So we modify it to return original val but remain
             // it as 'string' to avoid error in replacing.
             axis.type === 'category' ? rawLabel : axis.type === 'value' ? tickValue + '' : tickValue, index) : textColor
           })

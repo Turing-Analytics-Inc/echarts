@@ -52,7 +52,6 @@ import {
 } from 'zrender/src/core/util';
 import { getECData } from './innerStore';
 import * as colorTool from 'zrender/src/tool/color';
-import SeriesData from '../data/SeriesData';
 import SeriesModel from '../model/Series';
 import { CoordinateSystemMaster, CoordinateSystem } from '../coord/CoordinateSystem';
 import { queryDataIndex, makeInner } from './model';
@@ -62,6 +61,7 @@ import ExtensionAPI from '../core/ExtensionAPI';
 import ComponentModel from '../model/Component';
 import { error } from './log';
 import type ComponentView from '../view/Component';
+import SeriesData from '../data/SeriesData';
 
 // Reserve 0 as default.
 let _highlightNextDigit = 1;
@@ -262,17 +262,9 @@ function createEmphasisDefaultState(
         const fromStroke = hasSelect ? (store.selectStroke || store.normalStroke) : store.normalStroke;
         if (hasFillOrStroke(fromFill) || hasFillOrStroke(fromStroke)) {
             state = state || {};
-            let emphasisStyle = state.style || {};
-
-            // inherit case
-            if (emphasisStyle.fill === 'inherit') {
-                cloned = true;
-                state = extend({}, state);
-                emphasisStyle = extend({}, emphasisStyle);
-                emphasisStyle.fill = fromFill;
-            }
             // Apply default color lift
-            else if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
+            let emphasisStyle = state.style || {};
+            if (!hasFillOrStroke(emphasisStyle.fill) && hasFillOrStroke(fromFill)) {
                 cloned = true;
                 // Not modify the original value.
                 state = extend({}, state);
@@ -684,6 +676,9 @@ export function handleGlobalMouseOverForHighDown(
         if (ecData.focus === 'self') {
             blurComponent(ecData.componentMainType, ecData.componentIndex, api);
         }
+        api.dispatchAction(extend(ecData, {
+            type: 'hover'
+        }));
         // Other than series, component that not support `findHighDownDispatcher` will
         // also use it. But in this case, highlight/downplay are only supported in
         // mouse hover but not in dispatchAction.
@@ -701,8 +696,10 @@ export function handleGlobalMouseOutForHighDown(
     }
 
     allLeaveBlur(api);
-
     const ecData = getECData(dispatcher);
+    api.dispatchAction(extend(ecData, {
+        type: 'lineBlur'
+    }));
     const { dispatchers } = findComponentHighDownDispatchers(
         ecData.componentMainType, ecData.componentIndex, ecData.componentHighDownName, api
     );
